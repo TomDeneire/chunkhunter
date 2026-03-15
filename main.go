@@ -37,14 +37,20 @@ var indexHTML []byte
 // chunks holds the loaded chunk database
 var chunks map[string]int
 
-// exeDir returns the directory of the running executable,
-// so chunks.txt is found even when double-clicking the .exe on Windows.
+// exeDir returns the directory where chunks.txt should be found.
+// Uses the executable's directory (for deployed .exe), but falls back
+// to the working directory when run via "go run" (temp build cache).
 func exeDir() string {
 	exe, err := os.Executable()
 	if err != nil {
 		return "."
 	}
-	return filepath.Dir(exe)
+	dir := filepath.Dir(exe)
+	// "go run" places the binary in a temp/cache directory — fall back to cwd
+	if strings.Contains(dir, "go-build") || strings.Contains(dir, "go_build") {
+		return "."
+	}
+	return dir
 }
 
 // --- Chunk loading ---
