@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chunk Hunter</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+            min-height: 100vh;
+        }
+        header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        header h1 { font-size: 24px; font-weight: 600; }
+        header p { font-size: 14px; opacity: 0.8; }
+        .container { max-width: 960px; margin: 32px auto; padding: 0 20px; }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+        .card h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #2c3e50;
+        }
+
+        .drop-zone {
+            border: 2px dashed #bdc3c7;
+            border-radius: 8px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 16px;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: #3498db;
+            background: #ebf5fb;
+        }
+        .drop-zone p { font-size: 16px; color: #7f8c8d; margin-bottom: 8px; }
+        .drop-zone .formats { font-size: 13px; color: #95a5a6; }
+        .drop-zone input[type="file"] { display: none; }
+
+        .file-list {
+            list-style: none;
+            margin-bottom: 16px;
+        }
+        .file-list li {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 12px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        .file-list li .remove {
+            background: none;
+            border: none;
+            color: #e74c3c;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0 4px;
+        }
+
+        .btn {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #34495e; }
+        .btn:disabled { background: #95a5a6; cursor: not-allowed; }
+
+        .btn-sm {
+            padding: 6px 16px;
+            font-size: 13px;
+            border-radius: 4px;
+        }
+        .btn-outline {
+            background: white;
+            color: #2c3e50;
+            border: 1px solid #2c3e50;
+        }
+        .btn-outline:hover { background: #f0f2f5; }
+
+        .spinner {
+            display: inline-block;
+            width: 18px; height: 18px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .result-file {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .result-file-header {
+            background: #f8f9fa;
+            padding: 12px 20px;
+            font-weight: 600;
+            font-size: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .result-tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .result-tab {
+            padding: 10px 20px;
+            font-size: 14px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            border-bottom: 2px solid transparent;
+            color: #7f8c8d;
+            transition: color 0.2s, border-color 0.2s;
+        }
+        .result-tab.active {
+            color: #2c3e50;
+            border-bottom-color: #2c3e50;
+        }
+        .result-tab:hover { color: #2c3e50; }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+
+        .highlighted-text {
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 15px;
+            line-height: 1.8;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .stat-box {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 16px;
+            text-align: center;
+        }
+        .stat-box .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .stat-box .label {
+            font-size: 13px;
+            color: #7f8c8d;
+            margin-top: 4px;
+        }
+
+        .error-msg {
+            background: #fdf0f0;
+            color: #c0392b;
+            padding: 12px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .db-info {
+            font-size: 13px;
+            color: #95a5a6;
+            text-align: center;
+            padding: 8px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>Chunk Hunter</h1>
+            <p>Scan texts for predefined chunks and phrases</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="card">
+            <h2>Upload files</h2>
+            <div class="drop-zone" id="dropZone">
+                <p>Drag &amp; drop files here, or click to browse</p>
+                <span class="formats">Supported: .txt, .doc, .docx, .odt</span>
+                <input type="file" id="fileInput" multiple accept=".txt,.doc,.docx,.odt">
+            </div>
+            <ul class="file-list" id="fileList"></ul>
+            <button class="btn" id="scanBtn" disabled>Scan</button>
+        </div>
+
+        <div id="results"></div>
+        <div class="db-info" id="dbInfo"></div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById("dropZone");
+        const fileInput = document.getElementById("fileInput");
+        const fileList = document.getElementById("fileList");
+        const scanBtn = document.getElementById("scanBtn");
+        const resultsDiv = document.getElementById("results");
+        const dbInfo = document.getElementById("dbInfo");
+
+        let files = [];
+
+        // Drag and drop
+        dropZone.addEventListener("click", () => fileInput.click());
+        dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
+        dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+        dropZone.addEventListener("drop", e => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+            addFiles(e.dataTransfer.files);
+        });
+        fileInput.addEventListener("change", () => { addFiles(fileInput.files); fileInput.value = ""; });
+
+        function addFiles(newFiles) {
+            for (const f of newFiles) {
+                const ext = f.name.split(".").pop().toLowerCase();
+                if (["txt","doc","docx","odt"].includes(ext)) {
+                    files.push(f);
+                }
+            }
+            renderFileList();
+        }
+
+        function renderFileList() {
+            fileList.innerHTML = "";
+            files.forEach((f, i) => {
+                const li = document.createElement("li");
+                li.innerHTML = `<span>${escapeHtml(f.name)} <small>(${formatSize(f.size)})</small></span>
+                    <button class="remove" onclick="removeFile(${i})">&times;</button>`;
+                fileList.appendChild(li);
+            });
+            scanBtn.disabled = files.length === 0;
+        }
+
+        function removeFile(i) {
+            files.splice(i, 1);
+            renderFileList();
+        }
+
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + " B";
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " KB";
+            return (bytes / 1048576).toFixed(1) + " MB";
+        }
+
+        function escapeHtml(s) {
+            const d = document.createElement("div");
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        // Scan
+        scanBtn.addEventListener("click", async () => {
+            scanBtn.disabled = true;
+            scanBtn.innerHTML = '<span class="spinner"></span>Scanning...';
+            resultsDiv.innerHTML = "";
+
+            const formData = new FormData();
+            files.forEach(f => formData.append("files", f));
+
+            try {
+                const resp = await fetch("/api/scan", { method: "POST", body: formData });
+                const data = await resp.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="error-msg">${escapeHtml(data.error)}</div>`;
+                    return;
+                }
+
+                dbInfo.textContent = `Checked against ${data.totalChunks.toLocaleString()} registered combinations`;
+
+                data.results.forEach((r, idx) => {
+                    resultsDiv.innerHTML += renderResult(r, idx);
+                });
+
+                // Activate first tabs
+                document.querySelectorAll(".result-file").forEach(el => {
+                    const firstTab = el.querySelector(".result-tab");
+                    const firstContent = el.querySelector(".tab-content");
+                    if (firstTab) firstTab.classList.add("active");
+                    if (firstContent) firstContent.classList.add("active");
+                });
+            } catch (err) {
+                resultsDiv.innerHTML = `<div class="error-msg">Error: ${escapeHtml(err.message)}</div>`;
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.textContent = "Scan";
+            }
+        });
+
+        function renderResult(r, idx) {
+            const statsHTML = `
+                <div class="stats-grid">
+                    <div class="stat-box"><div class="value">${r.chunkWords}</div><div class="label">Chunk words</div></div>
+                    <div class="stat-box"><div class="value">${r.words}</div><div class="label">Total words</div></div>
+                    <div class="stat-box"><div class="value">${r.percent.toFixed(2)}%</div><div class="label">Chunk frequency</div></div>
+                </div>`;
+
+            return `
+            <div class="result-file">
+                <div class="result-file-header">
+                    <span>${escapeHtml(r.filename)}</span>
+                    <button class="btn btn-sm btn-outline" onclick="downloadCSV(${idx})">Download CSV</button>
+                </div>
+                <div class="result-tabs">
+                    <button class="result-tab" onclick="switchTab(this, 'highlighted-${idx}')">Highlighted text</button>
+                    <button class="result-tab" onclick="switchTab(this, 'stats-${idx}')">Statistics</button>
+                </div>
+                <div class="tab-content" id="highlighted-${idx}">
+                    <div class="highlighted-text">${r.html}</div>
+                </div>
+                <div class="tab-content" id="stats-${idx}">
+                    ${statsHTML}
+                </div>
+            </div>`;
+        }
+
+        function switchTab(btn, contentId) {
+            const parent = btn.closest(".result-file");
+            parent.querySelectorAll(".result-tab").forEach(t => t.classList.remove("active"));
+            parent.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            btn.classList.add("active");
+            document.getElementById(contentId).classList.add("active");
+        }
+
+        // CSV download
+        let lastResults = [];
+        const origFetch = window.fetch;
+        window.fetch = async function(...args) {
+            const resp = await origFetch(...args);
+            const clone = resp.clone();
+            try {
+                const data = await clone.json();
+                if (data.results) lastResults = data.results;
+            } catch {}
+            return resp;
+        };
+
+        function downloadCSV(idx) {
+            const r = lastResults[idx];
+            if (!r) return;
+            const blob = new Blob([r.csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = r.filename.replace(/\.[^.]+$/, "") + "_chunks.csv";
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    </script>
+</body>
+</html>

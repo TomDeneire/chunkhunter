@@ -1,2 +1,2 @@
 build:
-	env GOOS=windows GOARCH=amd64 GOBIN=~/projects/code/go/src/chunks go install chunks.go
+	env GOOS=windows GOARCH=amd64 go build -o chunks.exe .
