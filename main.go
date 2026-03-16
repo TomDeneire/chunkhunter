@@ -470,6 +470,33 @@ func handleScan(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func handleScanText(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST only", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Text string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, ScanResponse{Error: "Invalid request: " + err.Error()})
+		return
+	}
+	if strings.TrimSpace(req.Text) == "" {
+		writeJSON(w, ScanResponse{Error: "No text provided"})
+		return
+	}
+
+	result := scanText(req.Text)
+	result.Filename = "Pasted text"
+
+	writeJSON(w, ScanResponse{
+		Results:     []FileResult{result},
+		TotalChunks: len(chunks),
+	})
+}
+
 func writeJSON(w http.ResponseWriter, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(v)
@@ -499,6 +526,7 @@ func main() {
 
 	http.HandleFunc("/", handleIndex)
 	http.HandleFunc("/api/scan", handleScan)
+	http.HandleFunc("/api/scan-text", handleScanText)
 
 	// Find an available port
 	listener, err := net.Listen("tcp", "127.0.0.1:0")

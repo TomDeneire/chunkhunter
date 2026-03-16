@@ -222,6 +222,13 @@
             <button class="btn" id="scanBtn" disabled>Scan</button>
         </div>
 
+        <div class="card">
+            <h2>Or paste text</h2>
+            <textarea id="pasteArea" rows="10" placeholder="Paste or type your text here..."
+                style="width:100%;font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.6;padding:12px;border:1px solid #bdc3c7;border-radius:6px;resize:vertical;margin-bottom:16px;"></textarea>
+            <button class="btn" id="pasteBtn" disabled>Scan text</button>
+        </div>
+
         <div id="results"></div>
         <div class="db-info" id="dbInfo"></div>
     </div>
@@ -231,10 +238,17 @@
         const fileInput = document.getElementById("fileInput");
         const fileList = document.getElementById("fileList");
         const scanBtn = document.getElementById("scanBtn");
+        const pasteArea = document.getElementById("pasteArea");
+        const pasteBtn = document.getElementById("pasteBtn");
         const resultsDiv = document.getElementById("results");
         const dbInfo = document.getElementById("dbInfo");
 
         let files = [];
+
+        // Enable/disable paste scan button
+        pasteArea.addEventListener("input", () => {
+            pasteBtn.disabled = pasteArea.value.trim().length === 0;
+        });
 
         // Drag and drop
         dropZone.addEventListener("click", () => fileInput.click());
@@ -321,6 +335,45 @@
             } finally {
                 scanBtn.disabled = false;
                 scanBtn.textContent = "Scan";
+            }
+        });
+
+        // Paste text scan
+        pasteBtn.addEventListener("click", async () => {
+            pasteBtn.disabled = true;
+            pasteBtn.innerHTML = '<span class="spinner"></span>Scanning...';
+            resultsDiv.innerHTML = "";
+
+            try {
+                const resp = await fetch("/api/scan-text", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: pasteArea.value })
+                });
+                const data = await resp.json();
+
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="error-msg">${escapeHtml(data.error)}</div>`;
+                    return;
+                }
+
+                dbInfo.textContent = `Checked against ${data.totalChunks.toLocaleString()} registered combinations`;
+
+                data.results.forEach((r, idx) => {
+                    resultsDiv.innerHTML += renderResult(r, idx);
+                });
+
+                document.querySelectorAll(".result-file").forEach(el => {
+                    const firstTab = el.querySelector(".result-tab");
+                    const firstContent = el.querySelector(".tab-content");
+                    if (firstTab) firstTab.classList.add("active");
+                    if (firstContent) firstContent.classList.add("active");
+                });
+            } catch (err) {
+                resultsDiv.innerHTML = `<div class="error-msg">Error: ${escapeHtml(err.message)}</div>`;
+            } finally {
+                pasteBtn.disabled = pasteArea.value.trim().length === 0;
+                pasteBtn.textContent = "Scan text";
             }
         });
 
